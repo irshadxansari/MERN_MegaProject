@@ -105,7 +105,7 @@ const loginUser = asyncHandler(async(req,res) => {
 
     const {email, password} = req.body;
     if(!email){
-        throw new ApiError(400, "username or email is required")
+        throw new ApiError(400, "email is required")
     }
 
     let user = await User.findOne({email})
@@ -149,8 +149,8 @@ const logoutUser = asyncHandler(async(req,res) => {
     const user = await User.findByIdAndUpdate(
         {_id: req.user._id},
         {
-            $set:{
-                refreshToken: ""
+            $unset:{
+                refreshToken: 1
             }
         },
         {
@@ -180,7 +180,7 @@ const refreshAccessToken = asyncHandler(async(req,res) => {
             incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
         )
-    
+        console.log(decode)
         const user = await User.findById(decode?._id)
     
         if(!user){
@@ -221,10 +221,11 @@ const changePassword = asyncHandler(async(req,res) => {
     if(conformPassword !== newPassword){
         throw new ApiError(401, "New and conform password isn't matched")
     }
-
+    
     const user = await User.findById(req.user?._id)
+    // below is the model method not a mongoDB method
     const iscorrect = await user.isPasswordCorrect(oldPassword)
-
+    console.log(iscorrect)
     if(!iscorrect){
         throw new ApiError(400, "Invalid Old Password")
     }
@@ -238,9 +239,10 @@ const changePassword = asyncHandler(async(req,res) => {
 })
 
 const getUser = asyncHandler(async(req,res) => {
+    const user = req.user
     return res
     .status(200)
-    .json(200,req.user,"Current User Feteched Successfully")
+    .json(new ApiResponse(200,{user},"Current User Feteched Successfully"))
 })
 
 const updateAccountDetail = asyncHandler(async(req,res) => {
@@ -262,7 +264,7 @@ const updateAccountDetail = asyncHandler(async(req,res) => {
         {
             new: true
         }
-    ).select("-password")
+    ).select("-password -refreshToken")
 
     return res
     .status(200)
@@ -289,7 +291,7 @@ const updateUserAvatar = asyncHandler(async(req,res) => {
             }
         },
         {new: true}
-    ).select("-password")
+    ).select("-password -refreshToken")
 
     return res
     .status(200)
