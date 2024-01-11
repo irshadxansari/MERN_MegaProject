@@ -1,4 +1,5 @@
 import { Like } from "../models/like.models.js";
+import { Video } from "../models/video.models.js";
 import {isValidObjectId} from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -140,13 +141,19 @@ const toogleTweetLike = asyncHandler(async(req,res) => {
 const getLikedVideo = asyncHandler(async(req,res) => {
     
     // fetching the document from database on the basis of video and likeduser
-    const allLikedVideo = await Like.find({tweet:{$exists:true}, likedBy: req.user._id})
+    const userLikedVideo = await Like.find({video:{$exists:true}, likedBy: req.user._id})
+
+    // find the all liked video Id and store in array
+    const videoId = userLikedVideo.map(like => like.tweet)
+
+    // find the all video by videoId 
+    const videos = await Video.find({_id: {$in : videoId}})
 
     try {
         // return success response
         return res
         .status(200)
-        .json(new ApiResponse(200, {allLikedVideo}, "All Liked Video Fetch Successfully"))
+        .json(new ApiResponse(200, {videos}, "All Liked Video Fetch Successfully"))
     } catch (error) {
         throw new ApiError(500, "Something went wrong while fetching all Liked Video")
     }
