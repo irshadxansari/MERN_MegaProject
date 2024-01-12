@@ -140,16 +140,16 @@ const toogleTweetLike = asyncHandler(async(req,res) => {
 
 const getLikedVideo = asyncHandler(async(req,res) => {
     
-    // fetching the document from database on the basis of video and likeduser
-    const userLikedVideo = await Like.find({video:{$exists:true}, likedBy: req.user._id})
-
-    // find the all liked video Id and store in array
-    const videoId = userLikedVideo.map(like => like.tweet)
-
-    // find the all video by videoId 
-    const videos = await Video.find({_id: {$in : videoId}})
-
     try {
+        // fetching the document from database on the basis of video and likeduser
+        const userLikedVideo = await Like.find({video:{$exists:true}, likedBy: req.user._id}).select('video')
+    
+        // find the all liked video Id and store in an array
+        const videoId = userLikedVideo.map(like => like.video)
+    
+        // find the all video by videoId 
+        const videos = await Video.find({_id: {$in : videoId}})
+
         // return success response
         return res
         .status(200)
@@ -157,6 +157,7 @@ const getLikedVideo = asyncHandler(async(req,res) => {
     } catch (error) {
         throw new ApiError(500, "Something went wrong while fetching all Liked Video")
     }
+
 })
 
 export {

@@ -3,6 +3,7 @@ import { Tweet } from "../models/tweet.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
+import { isValidObjectId } from "mongoose";
 
 const createTweet = asyncHandler( async(req,res) => {
     try {
@@ -41,9 +42,9 @@ const getUserTweet = asyncHandler( async(req,res) => {
     // fetch the user id from request parameter
     const {userId} = req.params
 
-    // if user id empty then throw errow
-    if(!userId){
-        throw new ApiError((400), "User id is missing from parameter")
+    // validate the user id
+    if(!isValidObjectId(userId)){
+        throw new ApiError((400), "Invalid User Id")
     }
 
     // check if the user not exist in database
@@ -52,10 +53,16 @@ const getUserTweet = asyncHandler( async(req,res) => {
     }
 
     // find all the tweet for a given user id
-    const allTweet = await Tweet.find({owner:userId})
+    const allTweet = await Tweet.find({owner:userId}).select('id content')
+
+    // if error occured then
+    if(!allTweet){
+        throw new ApiError(500, "Something went wrong while retriving all tweet")
+    }
 
     console.log(allTweet)
 
+    // return success response
     return res
     .status(200)
     .json(new ApiResponse(200,{allTweet},"All Tweet Fetched Successfully of user"))
@@ -73,73 +80,49 @@ const updateTweet = asyncHandler( async(req,res) => {
     // fetch tweet id from the request parameter
     const {tweetId} = req.params
 
-    // check if tweet id is empty
-    if(!tweetId){
-        throw new ApiError(400, "Id Paramater is Missing")
+    // validate the tweet id
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "Invalid Tweet Id")
     }
     
     // check if tweet exist or not for a given tweet id
-    let tweet = await Tweet.findById({_id:tweetId})
+    const updateTweet = await Tweet.findOneAndUpdate(
+            {_id:tweetId, owner:req.user._id},
+            {content},
+            {new: true}
+        ).select('id content')
 
     // if no tweet exist then throw an error
-    if(!tweet){
-        throw new ApiError(404, "Tweet not found");
+    if(!updateTweet){
+        throw new ApiError(400, "Something went wrong while updating the tweet")
     }
 
-    // check if currently logged user is not owner of a tweet
-    if(String(tweet.owner) !== String(req.user._id)){
-        throw new ApiError(400, "Can't be Update Tweet")
-    }
-
-    // then update the tweet and push into the database
-    tweet.content = content
-    await tweet.save({validateBeforeSave:false})
-
-    tweet.owner = undefined
-    console.log(tweet)
-
-    if(!tweet){
-        throw new ApiError(500,"Error while updating the Tweet")
-    }
-    
+    // return success response
     return res
     .status(200)
-    .json(new ApiResponse(200,{tweet},"Tweet Updated Successfully"))
+    .json(new ApiResponse(200,{updateTweet},"Tweet Updated Successfully"))
 })
 
 const deleteTweet = asyncHandler( async(req,res) => {
-    // fetch the tweet id from request paramater
+    try {
+        // fetch the tweet id from request paramater
         const {tweetId} = req.params
-    
-        console.log(tweetId)
 
-        // if tweet id is empty then throw error
-        if(!tweetId){
-            throw new ApiError(400,"Id parameter is missing")
+        // validate the tweet id
+        if(!isValidObjectId(tweetId)){
+            throw new ApiError(400, "Invalid Tweet Id")
         }
     
-        // checking whether tweet exist for a given tweet id
-        const tweet = await Tweet.findById({_id:tweetId})
-
-        if(!tweet){
-            throw new ApiError(404,"Tweet not found")
-        }
-
-        console.log(String(tweet.owner))
-        console.log(String(req.user._id))
-
-        // checking currently logged user is the owner of tweet or not
-        if(String(tweet.owner) !== String(req.user._id)){
-            throw new ApiError(400, "Can't Delete the Tweet")
-        }
-
-        // if currently logged user is owner then delete the post
-        await Tweet.findByIdAndDelete({_id: tweetId})
+        // fetch the document using tweet id check the owner and thedelete it
+        await Tweet.findOneAndDelete({_id:tweetId, owner:req.user._id})
 
         // send success response
         return res
         .status(200)
         .json(new ApiResponse(200),{}, "Tweet Deleted Sucessfully")
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while deleting the tweet")
+    }
 })
 
 export {
