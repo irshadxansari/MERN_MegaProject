@@ -385,7 +385,8 @@ const getUserChannelProfile = asyncHandler(async(req,res) => {
                 isSubscribed: 1
             }
         }
-    ])
+    ]).exec();
+    
     console.log(channelInfo)
     
     if(!channelInfo?.length){

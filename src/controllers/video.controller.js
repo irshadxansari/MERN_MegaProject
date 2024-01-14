@@ -70,8 +70,14 @@ const getVideoById = asyncHandler(async (req, res) => {
     
         // fetch the document using video id
         const video = await Video.findById(
-            {_id: videoId}
+            {_id: videoId},
         ).select("-thumbnail -isPublished -duration")
+
+        // increase a view by 1
+        video.views = video.views + 1;
+
+        // save into the db
+        await video.save()
         
         // also fetch the user info
         const user = await User.findById(
@@ -81,7 +87,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         // now create a json of video Info
         const videoInfo = {
             video,
-            user 
+            user
         }
 
         // return success response
