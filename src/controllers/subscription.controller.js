@@ -90,7 +90,7 @@ const getSubscribedChannels = asyncHandler(async(req,res) => {
     
         //find the document by using subscriber id
         const subscribedChannel = await Subscription.find({subscriber:subscriberId}).select('id channel')
-    
+        
         return res
         .status(200)
         .json(new ApiResponse(200, {subscribedChannel}, "Subscribed Channel fetched Successfully"))

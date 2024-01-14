@@ -114,8 +114,12 @@ const deleteTweet = asyncHandler( async(req,res) => {
         }
     
         // fetch the document using tweet id check the owner and thedelete it
-        await Tweet.findOneAndDelete({_id:tweetId, owner:req.user._id})
+        const deleteTweet = await Tweet.findOneAndDelete({_id:tweetId, owner:req.user._id})
 
+        if(!deleteTweet){
+            throw new ApiError(400, "Unauthorized Request")
+        }
+        
         // send success response
         return res
         .status(200)

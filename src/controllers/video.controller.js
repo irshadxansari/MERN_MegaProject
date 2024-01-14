@@ -136,9 +136,7 @@ const updateVideo = asyncHandler(async (req, res) => {
             throw new ApiError(400, "Unauthorized Request")
         }
     } else{
-        return res
-        .status(200)
-        .json(new ApiResponse(200, {}, "nothing to be update"))
+        throw new ApiError(400, "At least one field is required")
     }
 })
 
