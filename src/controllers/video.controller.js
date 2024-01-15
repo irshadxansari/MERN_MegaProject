@@ -56,7 +56,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .status(200)
     .json( new ApiResponse(200, {video}, "Video Created Successfully"))
 
-})
+})  
 
 const getVideoById = asyncHandler(async (req, res) => {
     try {
@@ -68,32 +68,23 @@ const getVideoById = asyncHandler(async (req, res) => {
             throw new ApiError(400, "Invalid Video Id")
         }
     
-        // fetch the document using video id
-        const video = await Video.findById(
+        // fetch the document using video id and increase view by one 
+        const video = await Video.findByIdAndUpdate(
             {_id: videoId},
+            {$inc: {views: 1}},
+            {new: true}
         ).select("-thumbnail -isPublished -duration")
 
-        // increase a view by 1
-        video.views = video.views + 1;
-
-        // save into the db
-        await video.save()
-        
-        // also fetch the user info
-        const user = await User.findById(
-            {_id: video?.owner}
-        ).select("username avatar")
-
-        // now create a json of video Info
-        const videoInfo = {
-            video,
-            user
-        }
+        // update the watch history
+        await User.findByIdAndUpdate(
+            {_id: req.user._id},
+            {$addToSet: { watchHistory: videoId }}
+        )
 
         // return success response
         return res
         .status(200)
-        .json( new ApiResponse(200, {videoInfo}, "video by id fetched successfully"))
+        .json( new ApiResponse(200, {video}, "video by id fetched successfully"))
     } catch (error) {
         throw new ApiError(500, "Something went wrong while fetching video")
     }

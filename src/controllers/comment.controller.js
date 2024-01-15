@@ -1,12 +1,73 @@
-import { isValidObjectId } from "mongoose"
+import mongoose, { isValidObjectId } from "mongoose"
 import {Comment} from "../models/comment.models.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 
 const getVideoComments = asyncHandler(async(req,res) => {
+    // fetch the video id from request parameter
     const {videoId} = req.params
+
+    // validate the video id
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Id")
+    }
+
+    // fetch the option from request query
     const {page = 1, limit = 10} = req.query
+
+    // create a paginate option for result
+    const options = {
+        // since we are receiving in string so converting into interger
+        page: parseInt(page),
+        limit: parseInt(limit)
+    }
+    const result = await Comment.aggregatePaginate([
+        {
+            // match the comment with video id
+            $match:{
+                video: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        {
+            $unwind: "owner"
+        },
+        {
+            $project: {
+                content: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                "owner.firstname": 1,
+                "owner.lastname": 1,
+                "owner.username": 1,
+                "owner.avatar": 1,
+            }
+        },
+        {
+            // sorting comments by 'createdAt' in descending order
+            $sort: {
+                createdAt: -1
+            }
+        }
+    ],
+    options
+    )
+
+    console.log(result)
+
+    // return success response
+    return res
+    .status(200)
+    .json( new ApiResponse(200, {result}, "Video Comment fetched Successfully"))
+    
 })
 
 const addComment = asyncHandler(async(req,res) => {
